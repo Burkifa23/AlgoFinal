@@ -2,18 +2,18 @@ def piece_limited_dp(n, prices, k):
     """
     Find the maximum revenue obtainable from a rod of length n using at most k pieces.
 
-    Args:
+    Inputs:
         n: Length of the original rod.
         prices: List where prices[i-1] is the price of a piece of length i.
         k: Maximum number of pieces allowed.
 
-    Returns:
+    Outputs:
         A tuple containing:
         - Maximum revenue
         - List of piece lengths used
     """
 
-    # Handle invalid inputs
+    # Invalid inputs
     if n < 0 or k < 0:
         raise ValueError("Rod length and piece limit must be nonnegative.")
 
@@ -36,15 +36,10 @@ def piece_limited_dp(n, prices, k):
             for j in range(1, i + 1):
                 remaining_length = i - j
                 remaining_pieces = m - 1
-
                 previous_revenue = dp[remaining_length][remaining_pieces]
-
-                # Ignore impossible states
                 if previous_revenue == float("-inf"):
                     continue
-
                 revenue = prices[j - 1] + previous_revenue
-
                 if revenue > dp[i][m]:
                     dp[i][m] = revenue
                     first_piece[i][m] = j
@@ -53,19 +48,15 @@ def piece_limited_dp(n, prices, k):
     if dp[n][k] == float("-inf"):
         return None, []
 
-    # Recover the actual piece lengths
     pieces = []
     remaining_length = n
     remaining_limit = k
 
     while remaining_length > 0:
         chosen_piece = first_piece[remaining_length][remaining_limit]
-
         if chosen_piece is None:
             return None, []
-
         pieces.append(chosen_piece)
-
         remaining_length -= chosen_piece
         remaining_limit -= 1
 
