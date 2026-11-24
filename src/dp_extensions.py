@@ -20,13 +20,13 @@ def piece_limited_dp(n, prices, k):
     if len(prices) < n:
         raise ValueError("A price must be provided for every length.")
 
+    if any(price < 0 for price in prices[:n]):
+        raise ValueError("Prices must be nonnegative.")
+
     # dp[i][m] = maximum revenue for length i using at most m pieces
     dp = [[float("-inf")] * (k + 1) for _ in range(n + 1)]
-
-    # Store the first piece chosen for each state
     first_piece = [[None] * (k + 1) for _ in range(n + 1)]
 
-    # A rod of length zero has zero revenue
     for m in range(k + 1):
         dp[0][m] = 0
 
