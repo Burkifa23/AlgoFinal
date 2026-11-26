@@ -1,9 +1,13 @@
+"""Brute-force solver for the rod cutting problem, plus the shared result type
+and input check that the other solvers import."""
+
 from typing import List, NamedTuple, Optional
 
 
 class CutPlan(NamedTuple):
     revenue: float
     piece_lengths: List[int]
+    """What every solver returns: the total revenue and the piece lengths."""
 
 
 def check_inputs(price_table, rod_length, cut_fee):
@@ -12,11 +16,16 @@ def check_inputs(price_table, rod_length, cut_fee):
     if cut_fee < 0:
         raise ValueError("cut_fee must be nonnegative")
     if len(price_table) < rod_length + 1:
-        raise ValueError("price_table needs entries for lengths 0..rod_length (index 0 unused)")
+        raise ValueError(
+            "price_table needs entries for lengths 0..rod_length (index 0 unused)"
+        )
+    """Stop early with a ValueError if the rod length, cut fee or price table
+    can't be used."""
 
 
-def exhaustive_cut(price_table, rod_length: int, cut_fee: float = 0,
-                   metrics: Optional[dict] = None) -> CutPlan:
+def exhaustive_cut(
+    price_table, rod_length: int, cut_fee: float = 0, metrics: Optional[dict] = None
+) -> CutPlan:
     """Try every possible first piece, then recurse on what is left.
     O(2^n) calls, O(n) stack depth. price_table[i] is the price of length i."""
     check_inputs(price_table, rod_length, cut_fee)
@@ -41,3 +50,18 @@ def exhaustive_cut(price_table, rod_length: int, cut_fee: float = 0,
     if metrics is not None:
         metrics["calls"] = call_total
     return CutPlan(revenue, piece_lengths)
+    """Find the best way to cut the rod by trying every possible first piece
+    and solving the leftover length the same way.
+
+    price_table[i] is the price of a piece of length i, and price_table[0]
+    is only there to keep the indexing simple (put 0). The table needs at
+    least rod_length + 1 entries. cut_fee is charged once for every cut, so
+    a rod sold in k pieces pays for k - 1 cuts, and a rod sold whole pays
+    nothing.
+
+    Returns a CutPlan with the revenue after cut fees and the piece lengths.
+    If metrics is a dict, the number of recursive calls is stored in
+    metrics["calls"].
+
+    Makes 2^n calls, so only use it for small rods.
+    """
