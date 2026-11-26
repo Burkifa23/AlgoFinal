@@ -18,6 +18,10 @@ from greedy import greedy_cut
 OUT = os.path.join(HERE, "results")
 REPEATS=5
 
+EXHAUSTIVE_CUTOFF_S=2.0
+EXHAUSTIVE_MAX_N=30
+
+
 def prices_for(n,pattern, seed=0):
     # price table for lengths 0 till n
     seeded_random= random.Random(f"{pattern}-{n}-{seed}")
@@ -63,14 +67,48 @@ def write_csv(name, header, rows):
         writer.writerows(rows)
     print(f"\tsaved {name} ({len(rows)} rows)")
 
+
+def exhaustive_experiment():
+    # item 1,2,3,5 exhuastive time and call count vs n, with a cutoff.
+    rows=[]
+    for n in range(1, EXHAUSTIVE_MAX_N+1):
+        prices=prices_for(n,"random")
+
+        # one run to count calls and check how slow this n is going to be
+        counter={}
+        start=time.perf_counter()
+        exhaustive_cut(prices,n,metrics=counter)
+        first_run=time.perf_counter()-start
+
+        # fast runs are noisy
+        # slow runs are stable
+        #
+        seconds=timed(exhaustive_cut,prices,n) if first_run<0.1 else first_run
+
+        rows.append([n,seconds, counter["calls"], "measured"])
+        print(f"\texhaustive n={n:2d} {seconds:9.5f} sec calls={counter['calls']}")
+
+        if seconds>EXHAUSTIVE_CUTOFF_S:
+            print(f"\tcutoff reached at n={n}")
+            break
+
+    last_n = rows[-1][0]
+    last_seconds=rows[-1][1]
+    last_calls =rows[-1][2]
+
+    # predict time per call
+    seconds_per_call=last_seconds/last_calls
+    for n in range(last_n+1, EXHAUSTIVE_MAX_N+1):
+        calls=2**(n-1)
+        rows.append([n,seconds_per_call*calls,calls,"predicted"])
+
+    write_csv("exhaustive.csv", ["n","seconds","calls","kind"], rows)
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     machine_info()
+    exhaustive_experiment()
 
-    #test
-    p=prices_for(10,"random")
-    print("prices: ",p)
-    print("bottom-up n=10 takes", timed(tabulated_cut,p,10),"s")
 
 if __name__=="__main__":
     main()
