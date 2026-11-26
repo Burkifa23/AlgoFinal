@@ -53,15 +53,16 @@ def exhaustive_cut(
     """Find the best way to cut the rod by trying every possible first piece
     and solving the leftover length the same way.
 
-    price_table[i] is the price of a piece of length i, and price_table[0]
-    is only there to keep the indexing simple (put 0). The table needs at
-    least rod_length + 1 entries. cut_fee is charged once for every cut, so
-    a rod sold in k pieces pays for k - 1 cuts, and a rod sold whole pays
+    price_table[i] is the price of a piece of length i. price_table[0] only
+    holds a place so the indexing lines up (put 0 there), and the table needs
+    at least rod_length + 1 entries. cut_fee is charged once per cut, so a
+    rod sold in k pieces pays for k - 1 cuts, and a rod sold whole pays
     nothing.
 
     Returns a CutPlan with the revenue after cut fees and the piece lengths.
     If metrics is a dict, the number of recursive calls is stored in
     metrics["calls"].
 
-    Makes 2^n calls, so only use it for small rods.
+    For a rod of length n >= 1 this makes 2^(n-1) calls, so it is only
+    practical for small rods.
     """
