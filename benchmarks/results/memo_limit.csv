@@ -1,0 +1,9 @@
+n,survived,exit_code
+10500,False,0xc00000fd
+5750,False,0xc00000fd
+3375,False,0xc00000fd
+2187,False,0xc00000fd
+1593,True,0x0
+1890,True,0x0
+2038,True,0x0
+2112,True,0x0

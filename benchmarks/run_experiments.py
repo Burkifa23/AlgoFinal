@@ -5,6 +5,7 @@ import random
 import statistics
 import sys
 import time
+import subprocess
 
 
 
@@ -20,6 +21,8 @@ REPEATS=5
 
 EXHAUSTIVE_CUTOFF_S=2.0
 EXHAUSTIVE_MAX_N=30
+DP_SIZES=[100,250,500,1000,2000,2500,4000,5000]
+MEMO_SAFE_N =2000
 
 
 def prices_for(n,pattern, seed=0):
@@ -104,10 +107,53 @@ def exhaustive_experiment():
 
     write_csv("exhaustive.csv", ["n","seconds","calls","kind"], rows)
 
+
+def dp_experiment():
+    # bottom-up time vs n memoized only where it is safe
+    rows=[]
+    for n in DP_SIZES:
+        prices=prices_for(n, "random")
+        bottom_up=timed(tabulated_cut, prices, n)
+        memo=timed(memoized_cut,prices, n) if n <= MEMO_SAFE_N else ""
+        rows.append([n,bottom_up,memo])
+        memo_text=f"{memo:8.4f} sec" if memo != "" else "unsafe"
+        print(f"\tdp n={n:5d} bottom-up={bottom_up:8.4f} sec memoized={memo_text}")
+    write_csv("dp.csv",["n","bottomup_seconds","memo_seconds"],rows)
+
+def memo_survives(n):
+    # run memoized DP at size n in a subprocess
+
+    code=("import sys;"
+        "sys.path.insert(0,'src');"
+        "from dp_solvers import memoized_cut;"
+        f"memoized_cut([0]+[1]*{n}, {n})")
+    result=subprocess.run([sys.executable, "-c", code],cwd=os.path.join(HERE,".."),capture_output=True)
+    return result.returncode==0, result.returncode
+
+def memo_limit_experiment():
+    # item 8 largest n memoized DP survives by by binary search
+    low=1000
+    high=20000
+    rows=[]
+    while high-low>100:
+        mid=(low+high)//2
+        survived, exit_code=memo_survives(mid)
+        rows.append([mid, survived, hex(exit_code)])
+        print(f"\tmemoized n={mid:5d} survived={survived} exit={hex(exit_code)}")
+        if survived:
+            low=mid
+        else:
+            high=mid
+    print(f"\tmemoized survives n={low}, crashes by n={high}")
+    write_csv("memo_limit.csv", ["n", "survived", "exit_code"], rows)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     machine_info()
     exhaustive_experiment()
+    dp_experiment()
+    memo_limit_experiment()
 
 
 if __name__=="__main__":
