@@ -56,5 +56,37 @@ class HandVerified(unittest.TestCase):
         self.assertEqual(exact.revenue, 18)
         self.assertEqual(exact.piece_lengths, [3,3])
 
+class EdgeCases(unittest.TestCase):
+    def test_zero_length(self):
+        # n=0 whereby nothing to sell returns 0 revenue and no piveces
+        for solve in EXACT:
+            with self.subTest(solver=solve.__name__):
+                plan=solve([0],0)
+                self.assertEqual(plan.revenue,0)
+                self.assertEqual(plan.piece_lengths,[])
+
+    def test_length_one_with_feet(self):
+        #n=1 so no cut is possible meaning no feel will charged
+        for solve in EXACT:
+            with self.subTest(solver=solve.__name__):
+                plan=solve([0,7],1,cut_fee=3)
+                self.assertEqual(plan.revenue,7)
+                self.assertEqual(plan.piece_lengths,[1])
+
+    def test_invalid_inputs_rejected(self):
+        for solve in EXACT + [greedy_cut]:
+            with self.subTest(solver=solve.__name__):
+                # negative length
+                with self.assertRaises(ValueError):
+                    solve(CLRS,-1)
+                # negative fee
+                with self.assertRaises(ValueError):
+                    solve(CLRS,4,cut_fee=-1)
+                # a really short price table
+                with self.assertRaises(ValueError):
+                    solve(CLRS,20)
+
+
+
 if __name__ == "__main__":
     unittest.main()
