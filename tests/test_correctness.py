@@ -1,13 +1,20 @@
 import os
 import sys
 import unittest
+import random
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from dp_solvers import tabulated_cut
+from exhaustive import exhaustive_cut
+from dp_solvers import tabulated_cut, memoized_cut
+from dp_extensions import piece_limited_dp
+from greedy import greedy_cut
+
 
 CLRS=[0,1,5,8,9,10,17,17,20,24,30]
+# every exact  solvers
+EXACT=[exhaustive_cut, memoized_cut, tabulated_cut]
 
 class HandVerified(unittest.TestCase):
     # best revenue for n =4 (2+2)
