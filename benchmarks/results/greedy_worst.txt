@@ -1,0 +1,3 @@
+largest gap: 22 (pattern=random, n=200 seed=196)
+greedy revenue 967: [1, 1, 1, 1, 13, 13, 170]
+exact revenue 989: [1, 1, 39, 49, 55, 55]
