@@ -38,6 +38,23 @@ class HandVerified(unittest.TestCase):
         # best revenue for n =10 as there would be no cuts
         plan = tabulated_cut(CLRS,10)
         self.assertEqual(plan.revenue,30)
+    def test_uncut_rod_pays_no_fee(self):
+        #revenu must be exaxtly p7=17
+        plan=tabulated_cut(CLRS,7,cut_fee=10**6)
+        self.assertEqual(plan.revenue, 17)
+        self.assertEqual(plan.piece_lengths, [7])
+
+    def test_greedy_fails_report_example(self):
+        # for n=6, prices 1,3,9,13,14,16
+        # greedy takes 4 then 2=16
+        # the optimum must be 3+3=18
+        prices=[0,1,3,9,13,14,16]
+        greedy=greedy_cut(prices,6)
+        exact=tabulated_cut(prices,6)
+        self.assertEqual(greedy.revenue,16)
+        self.assertEqual(sorted(greedy.piece_lengths), [2,4])
+        self.assertEqual(exact.revenue, 18)
+        self.assertEqual(exact.piece_lengths, [3,3])
 
 if __name__ == "__main__":
     unittest.main()
