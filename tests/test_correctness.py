@@ -16,6 +16,49 @@ CLRS=[0,1,5,8,9,10,17,17,20,24,30]
 # every exact  solvers
 EXACT=[exhaustive_cut, memoized_cut, tabulated_cut]
 
+def enumerate_all(prices, n, fee=0, max_pieces=None):
+    # best revenue over all 2^(n-1) ways to cur without using any recurrece
+    # return none if no cutting gits within max_pieces
+
+    if n==0:
+        return 0
+    best=None
+    for mask in range(2**(n-1)):
+        pieces=[]
+        start=0
+        for position in range(1,n):
+            # check for a cut at this position
+            if (mask>>(position-1))&1:
+                pieces.append(position-start)
+                start=position
+        # the last piece
+        pieces.append(n-start)
+
+        if max_pieces is not None and len(pieces)>max_pieces:
+            continue
+        revenue=sum(prices[p] for p in pieces)-fee*(len(pieces)-1)
+        if best is None or revenue>best:
+            best=revenue
+    return best
+
+def plan_value(prices, pieces, fee=0):
+    # recompute a plan's revenue from its pieces
+    return sum(prices[p] for p in pieces) - fee*max(0,len(pieces)-1)
+
+def random_prices(n, seeded_random, pattern):
+    if pattern=="random":
+        return [0]+ [seeded_random.randint(0,5*i) for i in range(1, n+1)]
+    if pattern=="linear":
+        return [0]+ [3*i for i in range(1, n+1)]
+    if pattern=="concave":
+        return [0]+ [int(10*i**0.5) for i in range(1, n+1)]
+    if pattern=="convex":
+        return [0]+ [i*i for i in range(1, n+1)]
+    raise ValueError(pattern)
+
+
+
+
 class HandVerified(unittest.TestCase):
     # best revenue for n =4 (2+2)
     def test_clrs_n4(self):
@@ -85,6 +128,41 @@ class EdgeCases(unittest.TestCase):
                 # a really short price table
                 with self.assertRaises(ValueError):
                     solve(CLRS,20)
+
+class AgainstBaseline(unittest.TestCase):
+    # crosschecking wheter the every exact solver matches the bruteforce on small n
+
+    def test_baseline_matches_clrs(self):
+        # check my checker against answers from CLRS
+        for n, expected in [(4,10), (5,13), (7,18), (8,22), (10,30)]:
+            with self.subTest(n=n):
+                self.assertEqual(enumerate_all(CLRS,n), expected)
+
+    def test_exact_solvers(self):
+        seeded_random=random.Random(456)
+        for pattern in ["random", "linear","concave", "convex"]:
+            for n in range(0,13):
+                prices=random_prices(n, seeded_random,pattern)
+                for fee in [0,1,4]:
+                    expected=enumerate_all(prices, n, fee)
+                    for solve in EXACT:
+                        with self.subTest(pattern=pattern, n=n, fee=fee, solver=solve.__name__):
+                            plan=solve(prices,n,cut_fee=fee)
+                            self.assertEqual(plan.revenue, expected)
+                            self.assertEqual(sum(plan.piece_lengths),n)
+                            self.assertEqual(plan_value(prices, plan.piece_lengths,fee),expected)
+
+    def test_piece_limited(self):
+        seeded_random= random.Random(7)
+        for n in range(1,12):
+            prices=random_prices(n,seeded_random,"random")
+            for k in range(1, n+2):
+                with self.subTest(n=n, k=k):
+                    revenue,pieces=piece_limited_dp(n, prices[1:],k)
+                    self.assertEqual(revenue,enumerate_all(prices,n,max_pieces=k))
+                    self.assertLessEqual(len(pieces),k)
+                    self.assertEqual(sum(pieces),n)
+                    self.assertEqual(plan_value(prices,pieces),revenue)
 
 
 
