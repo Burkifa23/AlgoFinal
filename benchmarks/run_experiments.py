@@ -15,6 +15,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "src"))
 from exhaustive import exhaustive_cut
 from dp_solvers import memoized_cut, tabulated_cut
 from greedy import greedy_cut
+from dp_extensions import piece_limited_dp
+
 
 OUT = os.path.join(HERE, "results")
 
@@ -30,7 +32,7 @@ GREEDY_SIZES=[5,10,20,50,100,200]
 GREEDY_SEEDS=200
 PATTERNS=["random","linear","concave","convex"]
 
-
+TIME_LIMIT_S=2.0
 
 def prices_for(n,pattern, seed=0):
     # price table for lengths 0 till n
@@ -153,6 +155,7 @@ def memo_limit_experiment():
             high=mid
     print(f"\tmemoized survives n={low}, crashes by n={high}")
     write_csv("memo_limit.csv", ["n", "survived", "exit_code"], rows)
+    return low
 
 def greedy_counterexample():
     # hand-checked case p=(1,5,8,9), n=4
@@ -197,17 +200,62 @@ def greedy_experiment():
     print(f"\tlargest gap {gap} at pattern={pattern}, n={n}, seed={seed}")
 
 
+def one_run(function, *args, **kwargs):
+    start=time.perf_counter()
+    function(*args, **kwargs)
+    return time.perf_counter()-start
 
+def largest_n_within_limit(run, start_n, grow):
+    # let n grow until one run exceeds 2 seconds.
+    # then retyrn the largest finished in time
+    n, last_ok =start_n, None
+    while True:
+        seconds=run(n)
+        if seconds>TIME_LIMIT_S:
+            return last_ok
+        last_ok=(n, seconds)
+        n=grow(n)
 
+def limits_experiment(memo_limit):
+    # largest n each method finishes within the 2 sec time limit
+    def p(n):
+        return prices_for(n,"random")
+
+    # exhaustive n grows by 1
+    by_one=lambda n:n+1
+    # the rest grow by 25%
+    by_25pct=lambda n:int(n*1.25)+1
+
+    cases = [
+        ("exhaustive", lambda n:one_run(exhaustive_cut, p(n), n), 10, by_one),
+        ("bottom-up", lambda n:one_run(tabulated_cut,p(n), n), 1000, by_25pct),
+        ("cut-cost c=1", lambda n:one_run(tabulated_cut,p(n),n, cut_fee=1), 1000, by_25pct),
+        ("greedy", lambda n:one_run(greedy_cut,p(n), n), 1000, by_25pct),
+        ("piece-limits k=1", lambda n:one_run(piece_limited_dp,n,p(n)[1:],1), 100, by_25pct),
+        ("piece-limits k=5", lambda n:one_run(piece_limited_dp, n, p(n)[1:],5), 100, by_25pct),
+        ("piece-limits k=20", lambda n:one_run(piece_limited_dp,n, p(n)[1:],20), 100, by_25pct),
+        ("piece-limits k=n", lambda n:one_run(piece_limited_dp,n, p(n)[1:],n), 20, by_25pct)
+    ]
+
+    rows=[]
+    for name, run, start_n, grow in cases:
+        n, seconds=largest_n_within_limit(run, start_n,grow)
+        rows.append([name,n,f"{seconds:.3f}", "time"])
+        print(f"\t{name:18s} largest n ={n:5d} ({seconds:.3f} sec)")
+
+    rows.append(["memoized", memo_limit, "", "stack overflow, not time"])
+    print(f"\t{'memoized':18s} largest n ={memo_limit:5d} (stack limit)")
+    write_csv("limits.csv", ["method", "largest_n", "seconds", "limited_by"],rows)
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     machine_info()
     exhaustive_experiment()
     dp_experiment()
-    memo_limit_experiment()
+    memo_limit=memo_limit_experiment()
     greedy_counterexample()
     greedy_experiment()
+    limits_experiment(memo_limit)
 
 
 if __name__=="__main__":
