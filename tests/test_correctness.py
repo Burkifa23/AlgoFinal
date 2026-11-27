@@ -108,7 +108,7 @@ class EdgeCases(unittest.TestCase):
                 self.assertEqual(plan.revenue,0)
                 self.assertEqual(plan.piece_lengths,[])
 
-    def test_length_one_with_feet(self):
+    def test_length_one_with_fee(self):
         #n=1 so no cut is possible meaning no feel will charged
         for solve in EXACT:
             with self.subTest(solver=solve.__name__):
