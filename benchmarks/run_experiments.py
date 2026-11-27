@@ -17,12 +17,19 @@ from dp_solvers import memoized_cut, tabulated_cut
 from greedy import greedy_cut
 
 OUT = os.path.join(HERE, "results")
+
 REPEATS=5
 
 EXHAUSTIVE_CUTOFF_S=2.0
 EXHAUSTIVE_MAX_N=30
+
 DP_SIZES=[100,250,500,1000,2000,2500,4000,5000]
 MEMO_SAFE_N =2000
+
+GREEDY_SIZES=[5,10,20,50,100,200]
+GREEDY_SEEDS=200
+PATTERNS=["random","linear","concave","convex"]
+
 
 
 def prices_for(n,pattern, seed=0):
@@ -131,7 +138,7 @@ def memo_survives(n):
     return result.returncode==0, result.returncode
 
 def memo_limit_experiment():
-    # item 8 largest n memoized DP survives by by binary search
+    # largest n memoized DP survives by by binary search
     low=1000
     high=20000
     rows=[]
@@ -147,6 +154,51 @@ def memo_limit_experiment():
     print(f"\tmemoized survives n={low}, crashes by n={high}")
     write_csv("memo_limit.csv", ["n", "survived", "exit_code"], rows)
 
+def greedy_counterexample():
+    # hand-checked case p=(1,5,8,9), n=4
+    prices=[0,1,5,8,9]
+    greedy=greedy_cut(prices,4)
+    exact=tabulated_cut(prices,4)
+    print(f"\tcounterexample: greedy{greedy.piece_lengths} = {greedy.revenue}, exact {exact.piece_lengths} = {exact.revenue}")
+
+def greedy_experiment():
+    # greedy revenue vs exact optimum, per price pattern
+    summary= []
+    worst =None
+
+    for pattern in PATTERNS:
+        # one instance is enough because fixed patterns give the same prices for every seed is enough
+        seeds=range(GREEDY_SEEDS) if pattern == "random" else [0]
+
+        for n in GREEDY_SIZES:
+            ratios=[]
+            failures=0
+            for seed in seeds:
+                prices =prices_for(n,pattern,seed)
+                greedy=greedy_cut(prices,n)
+                exact=tabulated_cut(prices,n)
+
+                ratios.append(greedy.revenue/ exact.revenue)
+                gap=exact.revenue-greedy.revenue
+                if gap>0:
+                    failures+=1
+                if worst is None or gap> worst[0]:
+                    worst=(gap,pattern,n,seed,greedy,exact)
+            row=[pattern,n,len(ratios),statistics.mean(ratios), min(ratios), failures/len(ratios)]
+            summary.append(row)
+            print(f"\tgreedy {pattern:8s} n={n:3d} mean={row[3]:.4f} worst={row[4]:.4f} fail rate={row[5]:.0%}")
+    write_csv("greedy.csv", ["pattern","n", "instances", "mean_ratio","worst_ratio", "fail_rate"], summary)
+
+    gap,pattern,n,seed,greedy,exact= worst
+    with open(os.path.join(OUT, "greedy_worst.txt"),"w")as f:
+        f.write(f"largest gap: {gap} (pattern={pattern}, n={n} seed={seed})\n")
+        f.write(f"greedy revenue {greedy.revenue}: {sorted(greedy.piece_lengths)}\n")
+        f.write(f"exact revenue {exact.revenue}: {sorted(exact.piece_lengths)}\n")
+    print(f"\tlargest gap {gap} at pattern={pattern}, n={n}, seed={seed}")
+
+
+
+
 
 def main():
     os.makedirs(OUT, exist_ok=True)
@@ -154,6 +206,8 @@ def main():
     exhaustive_experiment()
     dp_experiment()
     memo_limit_experiment()
+    greedy_counterexample()
+    greedy_experiment()
 
 
 if __name__=="__main__":
