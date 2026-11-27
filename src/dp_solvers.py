@@ -4,7 +4,7 @@ top-down version and a bottom-up table version."""
 import sys
 from typing import List, Optional
 
-from .exhaustive import CutPlan, check_inputs  # adjust to your package layout
+from exhaustive import CutPlan, check_inputs
 
 
 def _rebuild_pieces(chosen_piece: List[int], rod_length: int) -> List[int]:
