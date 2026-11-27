@@ -34,6 +34,11 @@ PATTERNS=["random","linear","concave","convex"]
 
 TIME_LIMIT_S=2.0
 
+FEE_N=1000
+FEES=[0,0.5,1,2,4,8,16,32,64]
+K_N=200
+K_VALUES=[1,2,3,5,8,12,20,30,50,100,200]
+
 def prices_for(n,pattern, seed=0):
     # price table for lengths 0 till n
     seeded_random= random.Random(f"{pattern}-{n}-{seed}")
@@ -210,7 +215,7 @@ def largest_n_within_limit(run, start_n, grow):
     # then retyrn the largest finished in time
     n, last_ok =start_n, None
     while True:
-        seconds=run(n)
+        seconds=statistics.median([run(n) for _ in range(3)])
         if seconds>TIME_LIMIT_S:
             return last_ok
         last_ok=(n, seconds)
@@ -247,6 +252,40 @@ def limits_experiment(memo_limit):
     print(f"\t{'memoized':18s} largest n ={memo_limit:5d} (stack limit)")
     write_csv("limits.csv", ["method", "largest_n", "seconds", "limited_by"],rows)
 
+
+def cut_fee_experiment():
+    # effect of the cut fee on revenue, number or pieces and running time
+    rows=[]
+    for pattern in PATTERNS:
+        prices=prices_for(FEE_N,pattern)
+        for fee in FEES:
+            plan=tabulated_cut(prices, FEE_N, cut_fee=fee)
+            seconds=timed(tabulated_cut,prices,FEE_N,cut_fee=fee)
+            pieces=len(plan.piece_lengths)
+            rows.append([pattern, fee, plan.revenue, pieces, pieces-1, seconds])
+            print(f"\tfee {pattern:8s} c={fee:5} revenue={plan.revenue:10} "
+                f"pieces={pieces:5d} time={seconds:.4f} sec")
+    write_csv("cut_fee.csv", ["pattern", "fee", "revenue", "pieces", "cuts", "seconds"], rows)
+
+def piece_limit_experiment():
+    # effect of the piece limit k on revenue, compared with no limit
+    rows = []
+    for pattern in PATTERNS:
+        prices=prices_for(K_N, pattern)
+        unlimited=tabulated_cut(prices, K_N)
+        for k in K_VALUES:
+            revenue, pieces = piece_limited_dp(K_N, prices[1:],k)
+            share=revenue/ unlimited.revenue
+            rows.append([pattern, k, revenue, len(pieces), unlimited.revenue, len(unlimited.piece_lengths), share])
+            print(f"\tlimit {pattern:8s} k={k:3d} revenue={revenue:8} "
+                f"pieces used={len(pieces):3d} share of unlimited={share:.4f}")
+    write_csv("piece_limit.csv", ["pattern", "k", "revenue", "pieces_used", "unlimited_revenue", "unlimited_pieces", "share"], rows)
+
+
+
+
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     machine_info()
@@ -256,6 +295,8 @@ def main():
     greedy_counterexample()
     greedy_experiment()
     limits_experiment(memo_limit)
+    cut_fee_experiment()
+    piece_limit_experiment()
 
 
 if __name__=="__main__":

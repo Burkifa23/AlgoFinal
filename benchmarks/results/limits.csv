@@ -1,10 +1,10 @@
 method,largest_n,seconds,limited_by
-exhaustive,23,1.204,time
-bottom-up,7468,1.959,time
-cut-cost c=1,7468,1.916,time
-greedy,7468,0.144,time
-piece-limits k=1,4554,1.594,time
-piece-limits k=5,1864,1.794,time
-piece-limits k=20,953,1.998,time
-piece-limits k=n,262,1.983,time
+exhaustive,23,1.268,time
+bottom-up,5974,1.283,time
+cut-cost c=1,5974,1.289,time
+greedy,7468,0.153,time
+piece-limits k=1,4554,1.586,time
+piece-limits k=5,1864,1.858,time
+piece-limits k=20,953,1.954,time
+piece-limits k=n,209,1.036,time
 memoized,2112,,"stack overflow, not time"
